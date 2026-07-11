@@ -1,0 +1,62 @@
+{
+  "name": "TokenLab OpenAI-Compatible Chat",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tokenlab-chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4b8f9dbf-a12b-46bd-8e1b-0b33e7b30001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-480, 0],
+      "webhookId": "tokenlab-chat"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tokenlab.sh/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.TOKENLAB_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.body?.model ?? $json.model ?? 'gpt-5.5', messages: $json.body?.messages ?? $json.messages ?? [{ role: 'user', content: 'Hello from n8n' }], stream: false }) }}",
+        "options": {}
+      },
+      "id": "4b8f9dbf-a12b-46bd-8e1b-0b33e7b30002",
+      "name": "Call TokenLab",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-200, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "4b8f9dbf-a12b-46bd-8e1b-0b33e7b30003",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [80, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Call TokenLab", "type": "main", "index": 0 }]] },
+    "Call TokenLab": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "4b8f9dbf-a12b-46bd-8e1b-0b33e7b30010",
+  "meta": { "templateCredsSetupCompleted": false },
+  "tags": []
+}

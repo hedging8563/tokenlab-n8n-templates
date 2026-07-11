@@ -1,0 +1,137 @@
+{
+  "name": "TokenLab Async Video Task Polling",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tokenlab-async-media",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-880, 0],
+      "webhookId": "tokenlab-async-media"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tokenlab.sh/v1/videos/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.TOKENLAB_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.body?.model ?? $json.model ?? 'veo3.1', prompt: $json.body?.prompt ?? $json.prompt, duration: $json.body?.duration ?? $json.duration ?? 5, aspect_ratio: $json.body?.aspect_ratio ?? $json.aspect_ratio ?? '16:9' }) }}",
+        "options": {}
+      },
+      "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20002",
+      "name": "Create async video task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-640, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const task = $json;\nconst taskId = task.id ?? task.task_id;\nif (!taskId) throw new Error('TokenLab did not return a task id');\nreturn [{ json: { ...task, task_id: taskId, poll_url: task.poll_url ?? `/v1/tasks/${taskId}`, terminal: false } }];"
+      },
+      "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20003",
+      "name": "Normalize task handle",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20004",
+      "name": "Wait before polling",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [-160, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://api.tokenlab.sh' + ($json.poll_url ?? $('Normalize task handle').first().json.poll_url) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.TOKENLAB_API_KEY }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20005",
+      "name": "Poll task status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [80, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const terminalStatuses = new Set(['succeeded', 'completed', 'failed', 'cancelled', 'expired']);\nconst status = String($json.status ?? '').toLowerCase();\nreturn [{ json: { ...$json, terminal: terminalStatuses.has(status) } }];"
+      },
+      "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20006",
+      "name": "Check terminal status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            { "value1": "={{ $json.terminal }}", "operation": "isTrue" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20007",
+      "name": "Terminal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [560, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20008",
+      "name": "Return terminal task",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [800, -80]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Create async video task", "type": "main", "index": 0 }]] },
+    "Create async video task": { "main": [[{ "node": "Normalize task handle", "type": "main", "index": 0 }]] },
+    "Normalize task handle": { "main": [[{ "node": "Wait before polling", "type": "main", "index": 0 }]] },
+    "Wait before polling": { "main": [[{ "node": "Poll task status", "type": "main", "index": 0 }]] },
+    "Poll task status": { "main": [[{ "node": "Check terminal status", "type": "main", "index": 0 }]] },
+    "Check terminal status": { "main": [[{ "node": "Terminal?", "type": "main", "index": 0 }]] },
+    "Terminal?": {
+      "main": [
+        [{ "node": "Return terminal task", "type": "main", "index": 0 }],
+        [{ "node": "Wait before polling", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20010",
+  "meta": { "templateCredsSetupCompleted": false },
+  "tags": []
+}

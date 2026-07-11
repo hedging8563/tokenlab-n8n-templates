@@ -1,0 +1,92 @@
+{
+  "name": "TokenLab Model and Cost Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tokenlab-model-router",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "8f0c1a0e-7b1b-46bb-9e9e-0b33e7b10001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-640, 0],
+      "webhookId": "tokenlab-model-router"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.tokenlab.sh/v1/models",
+        "options": {}
+      },
+      "id": "8f0c1a0e-7b1b-46bb-9e9e-0b33e7b10002",
+      "name": "Read live model catalog",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Webhook').first().json.body ?? $('Webhook').first().json;\nconst catalog = $input.all().flatMap((item) => item.json.data ?? item.json.models ?? []);\nconst tier = String(input.budget_tier ?? 'balanced').toLowerCase();\nconst preferred = {\n  low: ['gpt-5-mini', 'gpt-5-nano', 'deepseek-v4-flash'],\n  balanced: ['gpt-5.5', 'claude-sonnet-5.5', 'gemini-3.5-flash'],\n  quality: ['claude-opus-4.8', 'gpt-5.5', 'gemini-3.5-flash']\n}[tier] ?? ['gpt-5.5'];\nconst liveIds = new Set(catalog.map((model) => model.id ?? model.name).filter(Boolean));\nconst model = preferred.find((candidate) => liveIds.has(candidate)) ?? (input.model && liveIds.has(input.model) ? input.model : (catalog[0]?.id ?? 'gpt-5.5'));\nreturn [{ json: { ...input, model, routing: { tier, preferred, catalog_count: catalog.length } } }];"
+      },
+      "id": "8f0c1a0e-7b1b-46bb-9e9e-0b33e7b10003",
+      "name": "Choose live model",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-160, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tokenlab.sh/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.TOKENLAB_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.model, messages: [{ role: 'user', content: $json.prompt ?? 'Hello from n8n' }], stream: false }) }}",
+        "options": {}
+      },
+      "id": "8f0c1a0e-7b1b-46bb-9e9e-0b33e7b10004",
+      "name": "Call TokenLab chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [80, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ routing: $('Choose live model').first().json.routing, model: $('Choose live model').first().json.model, response: $json }) }}",
+        "options": {}
+      },
+      "id": "8f0c1a0e-7b1b-46bb-9e9e-0b33e7b10005",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [320, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Read live model catalog", "type": "main", "index": 0 }]] },
+    "Read live model catalog": { "main": [[{ "node": "Choose live model", "type": "main", "index": 0 }]] },
+    "Choose live model": { "main": [[{ "node": "Call TokenLab chat", "type": "main", "index": 0 }]] },
+    "Call TokenLab chat": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "8f0c1a0e-7b1b-46bb-9e9e-0b33e7b10010",
+  "meta": { "templateCredsSetupCompleted": false },
+  "tags": []
+}
