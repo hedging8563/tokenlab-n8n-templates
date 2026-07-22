@@ -76,6 +76,42 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [320, 0]
+    },
+    {
+      "parameters": {
+        "content": "## 1. Receive request and read live models\nSend a POST body with `prompt` and optional `budget_tier` or `model`. The workflow reads TokenLab’s current public model catalog before choosing a model.",
+        "height": 400,
+        "width": 480
+      },
+      "id": "b706803b-2c56-42c2-af8f-98c14edc21aa",
+      "name": "Input and live catalog",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-720, -200]
+    },
+    {
+      "parameters": {
+        "content": "## 2. Choose a model and call TokenLab\nThe Code node selects a live logical model for the requested tier. The HTTP Request node uses `TOKENLAB_API_KEY` from the n8n environment; no credential is embedded in this template.",
+        "height": 400,
+        "width": 480
+      },
+      "id": "d1d8c74b-9a8d-45e6-967e-18de72127b2b",
+      "name": "Routing and completion",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-200, -200]
+    },
+    {
+      "parameters": {
+        "content": "## 3. Return the result\nThe response includes the selected model, routing metadata, and TokenLab completion payload for the webhook caller.",
+        "height": 400,
+        "width": 300
+      },
+      "id": "4d54ef30-d76c-40d8-9d20-acb90838d1c7",
+      "name": "Webhook response",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [280, -200]
     }
   ],
   "connections": {
