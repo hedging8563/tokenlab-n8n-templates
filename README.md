@@ -60,7 +60,7 @@ Video creation is asynchronous. The workflow follows the returned `poll_url` whe
 - Models: `GET /v1/models`
 - Chat: `POST /v1/chat/completions`
 - Video tasks: `POST /v1/videos/generations` and `GET /v1/tasks/{id}`
-- Full docs: https://docs.tokenlab.sh
+- Full docs: https://tokenlab.sh/docs
 - Canonical site: https://tokenlab.sh
 
 The templates are examples, not a replacement for the current API contract. Check the live docs before adding new fields or media operations.
