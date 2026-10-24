@@ -28,7 +28,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $json.body?.model ?? $json.model ?? 'veo3.1', prompt: $json.body?.prompt ?? $json.prompt, duration: $json.body?.duration ?? $json.duration ?? 5, aspect_ratio: $json.body?.aspect_ratio ?? $json.aspect_ratio ?? '16:9' }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: $json.body?.model ?? $json.model ?? 'veo3.1', operation: $json.body?.operation ?? $json.operation ?? 'text-to-video', prompt: $json.body?.prompt ?? $json.prompt, resolution: $json.body?.resolution ?? $json.resolution ?? '720p', duration: $json.body?.duration ?? $json.duration ?? 8, aspect_ratio: $json.body?.aspect_ratio ?? $json.aspect_ratio ?? '16:9' }) }}",
         "options": {}
       },
       "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20002",
@@ -39,7 +39,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const task = $json;\nconst taskId = task.id ?? task.task_id;\nif (!taskId) throw new Error('TokenLab did not return a task id');\nreturn [{ json: { ...task, task_id: taskId, poll_url: task.poll_url ?? `/v1/tasks/${taskId}`, terminal: false } }];"
+        "jsCode": "const API_ORIGIN = 'https://api.tokenlab.sh';\n// Accept relative (/v1/tasks/..) and same-origin absolute poll URLs; never send the key to another host.\n// Plain string checks: the Code node sandbox may not expose the URL global.\nfunction resolvePollUrl(pollUrl) {\n  const value = String(pollUrl).trim();\n  if (value.startsWith(API_ORIGIN + '/')) return value;\n  if (value.startsWith('/') && !value.startsWith('//')) return API_ORIGIN + value;\n  throw new Error(`Refusing to poll a non-TokenLab URL: ${value}`);\n}\nconst task = $json;\nconst taskId = task.id ?? task.task_id;\nif (!taskId) throw new Error('TokenLab did not return a task id');\nconst pollUrl = resolvePollUrl(task.poll_url ?? `/v1/tasks/${encodeURIComponent(taskId)}`);\nreturn [{ json: { ...task, task_id: taskId, poll_url: pollUrl, terminal: false } }];"
       },
       "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20003",
       "name": "Normalize task handle",
@@ -62,7 +62,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ 'https://api.tokenlab.sh' + ($json.poll_url ?? $('Normalize task handle').first().json.poll_url) }}",
+        "url": "={{ $json.poll_url ?? $('Normalize task handle').first().json.poll_url }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -79,7 +79,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const terminalStatuses = new Set(['succeeded', 'completed', 'failed', 'cancelled', 'expired']);\nconst status = String($json.status ?? '').toLowerCase();\nreturn [{ json: { ...$json, terminal: terminalStatuses.has(status) } }];"
+        "jsCode": "const API_ORIGIN = 'https://api.tokenlab.sh';\n// Accept relative (/v1/tasks/..) and same-origin absolute poll URLs; never send the key to another host.\n// Plain string checks: the Code node sandbox may not expose the URL global.\nfunction resolvePollUrl(pollUrl) {\n  const value = String(pollUrl).trim();\n  if (value.startsWith(API_ORIGIN + '/')) return value;\n  if (value.startsWith('/') && !value.startsWith('//')) return API_ORIGIN + value;\n  throw new Error(`Refusing to poll a non-TokenLab URL: ${value}`);\n}\nconst terminalStatuses = new Set(['succeeded', 'completed', 'failed', 'cancelled', 'expired']);\nconst status = String($json.status ?? '').toLowerCase();\nconst pollUrl = $json.poll_url ? resolvePollUrl($json.poll_url) : $('Normalize task handle').first().json.poll_url;\nreturn [{ json: { ...$json, poll_url: pollUrl, terminal: terminalStatuses.has(status) } }];"
       },
       "id": "c2f0a0c7-55cb-4ea0-b0e1-0b33e7b20006",
       "name": "Check terminal status",

@@ -36,12 +36,16 @@ The workflow reads `https://api.tokenlab.sh/v1/models` first. It prefers a live 
 {
   "prompt": "A slow camera move over a mountain lake at sunrise",
   "model": "veo3.1",
-  "duration": 5,
+  "operation": "text-to-video",
+  "resolution": "720p",
+  "duration": 8,
   "aspect_ratio": "16:9"
 }
 ```
 
-Video creation is asynchronous. The workflow follows the returned `poll_url` when present, otherwise it uses `/v1/tasks/{id}`. It checks `status` and stops only at `succeeded`, `completed`, `failed`, `cancelled`, or `expired`; it does not treat an optional progress field as completion.
+Only `prompt` is required; the workflow fills `operation: text-to-video`, `resolution: 720p`, `duration: 8` and `aspect_ratio: 16:9` for `veo3.1` and keeps any value you send. Read the allowed values for a model from `https://api.tokenlab.sh/v1/models/<model>` (`public_contract_summary`); for `veo3.1` the durations are 4, 6 or 8 seconds.
+
+Video creation is asynchronous. The workflow follows the returned `poll_url` when present (relative or absolute on `api.tokenlab.sh`; other hosts are refused so the key is never sent elsewhere), otherwise it uses `/v1/tasks/{id}`. It checks `status` and stops only at `succeeded`, `completed`, `failed`, `cancelled`, or `expired`; it does not treat an optional progress field as completion.
 
 ### OpenAI-compatible chat
 
